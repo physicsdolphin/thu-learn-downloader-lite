@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from thu_learn_downloader.client.course import Course
@@ -14,13 +15,19 @@ def document(
     document: Document,
     index: int,
 ) -> Path:
+
+    def sanitize(name: str) -> str:
+        # Replace invalid Windows characters with underscores
+        name = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', name.strip())
+        return name.rstrip(' .')
+
     filename: Path = (
         prefix
-        / semester.id
-        / course.name
+        / sanitize(semester.id)
+        / sanitize(course.name)
         / "docs"
-        / document_class.title
-        / f"{index:02d}-{document.title}".replace("/", "-slash-")
+        / sanitize(document_class.title)
+        / sanitize(f"{index:02d}-{document.title}")
     )
     if document.file_type:
         filename = filename.with_suffix("." + document.file_type)
@@ -30,15 +37,20 @@ def document(
 def homework(
     prefix: Path, semester: Semester, course: Course, homework: Homework
 ) -> Path:
-    return (
-        prefix
-        / semester.id
-        / course.name
-        / "work"
-        / f"{homework.number:02d}-{homework.title}".replace("/", "-slash-")
-        / "README.md"
-    )
 
+    def sanitize(name: str) -> str:
+        # Replace invalid Windows characters with underscores
+        name = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', name.strip())
+        return name.rstrip(' .')
+
+    return (
+            prefix
+            / sanitize(semester.id)
+            / sanitize(course.name)
+            / "work"
+            / sanitize(f"{homework.number:02d}-{homework.title}")
+            / "README.md"
+    )
 
 def attachment(
     prefix: Path,
@@ -47,7 +59,13 @@ def attachment(
     homework: Homework,
     attachment: Attachment,
 ) -> Path:
-    filename: Path = Path(attachment.name)
+
+    def sanitize(name: str) -> str:
+        # Replace invalid Windows characters with underscores
+        name = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', name.strip())
+        return name.rstrip(' .')
+
+    filename: Path = Path(sanitize(attachment.name))
     filename = filename.with_stem(
         f"{homework.number:02d}-{homework.title}-{attachment.type_}".replace(
             "/", "-slash-"
@@ -55,9 +73,9 @@ def attachment(
     )
     return (
         prefix
-        / semester.id
-        / course.name
+        / sanitize(semester.id)
+        / sanitize(course.name)
         / "work"
-        / f"{homework.number:02d}-{homework.title}".replace("/", "-slash-")
+        / sanitize(f"{homework.number:02d}-{homework.title}")
         / filename
     )
