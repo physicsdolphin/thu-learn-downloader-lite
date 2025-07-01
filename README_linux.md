@@ -24,15 +24,7 @@ Then install all required packages:
 pip install -r requirements.txt
 ```
 
-# 3. Initialize Playwright
-
-Install the necessary browser binaries for Playwright:
-
-```bash
-playwright install
-```
-
-# 4. Run the Program
+# 3. Run the Program
 
 Finally, start the program:
 
