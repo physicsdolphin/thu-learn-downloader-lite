@@ -44,15 +44,28 @@ def main(
 ) -> None:
     logging.getLogger().setLevel(log_level)
 
-    username = username or login.username() or typer.prompt(text="Username")
-    password = (
-            password or login.password() or typer.prompt(text="Password", hide_input=True)
-    )
+    learn: Learn = Learn(language=language)
+
+    while True:
+        u = username or login.username() or typer.prompt(text="Username")
+        p = password or login.password() or typer.prompt(text="Password", hide_input=True)
+
+        if learn.login_stage1(username=u, password=p):
+            if learn.login_stage2():
+                break
+            else:
+                return
+        else:
+            # On failure, inform the user and loop again
+            typer.secho("The username or password you entered is incorrect. Please try again.", fg=typer.colors.RED)
+            # Clear command-line arguments to ensure user is prompted again
+            username = ""
+            password = ""
+
     if not semesters:
         input_sem = typer.prompt(text="Semester (comma-separated)")
         semesters = [s.strip() for s in input_sem.split(",")]
-    learn: Learn = Learn(language=language)
-    learn.login(username=username, password=password)
+
     with Downloader(
         prefix=prefix,
         selector=Selector(
