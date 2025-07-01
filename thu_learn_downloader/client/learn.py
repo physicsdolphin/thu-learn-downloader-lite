@@ -1,12 +1,13 @@
 import functools
+import urllib.parse
+from collections.abc import Sequence
+from urllib.parse import ParseResult
 import re
 import typer
 from collections.abc import Sequence
 
 from bs4 import BeautifulSoup, Tag
-from playwright.sync_api import sync_playwright
 from requests import Response
-from requests.cookies import RequestsCookieJar
 from gmssl import sm2
 
 from thu_learn_downloader.common.typing import cast
@@ -20,7 +21,7 @@ class Learn:
     def __init__(self, language: Language = Language.ENGLISH, *args, **kwargs) -> None:
         self.client = Client(language, *args, **kwargs)
 
-    def login(self, username: str, password: str) -> None:
+    def login_stage1(self, username: str, password: str):
         response: Response = self.client.get(url=url.make_url(), verify=False)
         soup: BeautifulSoup = BeautifulSoup(
             markup=response.text, features="html.parser"
@@ -38,7 +39,7 @@ class Learn:
         )
         sm2pubkey = soup.select_one(selector="#sm2publicKey").text.strip()
         sm2_encryptor = sm2.CryptSM2(public_key=sm2pubkey, private_key=None, mode=1)
-        response = self.client.post(url="https://id.tsinghua.edu.cn/do/off/ui/auth/login/check", data={"i_user":username, "i_pass": '04'+sm2_encryptor.encrypt(password).hex()})
+        response = self.client.post(url="https://id.tsinghua.edu.cn/do/off/ui/auth/login/check", data={"i_user": username, "i_pass": '04'+sm2_encryptor.encrypt(password.encode('utf-8')).hex()})
 
         if "<title>二次认证</title>" in response.text or "doubleAuth.bundle.js" in response.text:
             typer.echo("Username and password verified. Proceeding to the next step.")
@@ -48,7 +49,96 @@ class Learn:
         else:
             return False
 
-        status = query.get("status", ["unknown"])[0]
+    def login_stage2(self):
+        response: Response = self.client.post(url="https://id.tsinghua.edu.cn/b/doubleAuth/login", data={"action": "FIND_APPROACHES"})
+        data = response.json()
+
+        if data.get("result") != "success":
+            print("Failed to retrieve authentication methods.")
+            print("Response data:", data)
+            return
+
+        methods = []
+        auth_object = data.get("object", {})
+
+        if auth_object.get("hasWeChatBool"):
+            methods.append("WeChat")
+
+        if auth_object.get("phone"):
+            methods.append(f"Mobile {auth_object['phone']}")
+
+        if not methods:
+            print("No authentication methods available.")
+            return
+
+        selected_method = ""
+        if len(methods) == 1:
+            selected_method = methods[0].split(" ")[0].lower()
+            typer.echo(f"Automatically selected the only available 2FA option: {methods[0]}")
+        else:
+            while True:
+                typer.echo("Please select a 2FA method:")
+                for i, method in enumerate(methods, start=1):
+                    typer.echo(f"{i}. {method}")
+
+                try:
+                    selection = typer.prompt("Enter the number of your choice", type=int)
+                    if 1 <= selection <= len(methods):
+                        selected_method = methods[selection - 1].split(" ")[0].lower()
+                        break
+                    else:
+                        # If number is out of range, print error and loop again
+                        typer.secho("Invalid selection. Please enter a number from the list.", fg=typer.colors.RED)
+                except typer.Abort:
+                    # Handle Ctrl+C
+                    typer.secho("\nSelection cancelled.", fg=typer.colors.YELLOW)
+                    raise
+                except ValueError:
+                    # Handle non-integer input
+                    typer.secho("Invalid input. Please enter a number.", fg=typer.colors.RED)
+        response: Response = self.client.post(
+            url="https://id.tsinghua.edu.cn/b/doubleAuth/login",
+            data={"action": "SEND_CODE", "type": selected_method}
+        )
+
+        if response.json().get("result") != "success":
+            print("Failed to send the authentication code.")
+            print("Response data:", response.json())
+            return
+        typer.echo(f"Authentication code sent via {selected_method}. Please check your device.")
+
+        redirect_url = ""
+        while True:
+            code = typer.prompt("Enter the authentication code")
+            response: Response = self.client.post(
+                url="https://id.tsinghua.edu.cn/b/doubleAuth/login",
+                data={"action": "VERITY_CODE", "vericode": code}
+            )
+            response_json = response.json()
+
+            if response_json.get("result") == "success":
+                redirect_url = response_json.get("object", {}).get("redirectUrl", "")
+                typer.echo("Authentication successful.")
+                break
+            else:
+                typer.secho(response_json.get("msg"), fg=typer.colors.RED)
+                if "失效" in response_json.get("msg"):
+                    typer.echo("Code has expired, sending a new code.")
+                    response: Response = self.client.post(
+                        url="https://id.tsinghua.edu.cn/b/doubleAuth/login",
+                        data={"action": "SEND_CODE", "type": selected_method}
+                    )
+
+        response: Response = self.client.get(url="https://id.tsinghua.edu.cn" + redirect_url)
+        soup: BeautifulSoup = BeautifulSoup(
+            markup=response.text, features="html.parser"
+        )
+        a: Tag = cast(Tag, soup.select_one(selector="a"))
+        href: str = cast(str, a["href"])
+        parse_result: ParseResult = urllib.parse.urlparse(url=href)
+        query: dict[str, list[str]] = urllib.parse.parse_qs(qs=parse_result.query)
+        print("Query received:", query)
+
         ticket = query.get("ticket", [None])[0]
         if ticket is None:
             print("Login probably failed — no ticket received.")
@@ -62,7 +152,8 @@ class Learn:
             verify = False
         )
         self.client.get(url=url.make_url(path="/f/wlxt/index/course/student/"), verify=False)
-        assert status == "SUCCESS"
+
+        return True
 
     @functools.cached_property
     # def semesters(self) -> Sequence[Semester]:
