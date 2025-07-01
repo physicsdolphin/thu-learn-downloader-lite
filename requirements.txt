@@ -21,3 +21,4 @@ urllib3==2.5.0 ; python_version >= "3.10" and python_version < "4.0"
 tqdm~=4.67.1
 filelock~=3.18.0
 pydantic
+gmssl
