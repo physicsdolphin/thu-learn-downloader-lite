@@ -146,12 +146,6 @@ class Learn:
             return
 
         self.client.get(url=href, verify=False)
-        self.client.get(
-            url=url.make_url(path="/b/j_spring_security_thauth_roaming_entry"),
-            params={"ticket": ticket},
-            verify = False
-        )
-        self.client.get(url=url.make_url(path="/f/wlxt/index/course/student/"), verify=False)
 
         return True
 
