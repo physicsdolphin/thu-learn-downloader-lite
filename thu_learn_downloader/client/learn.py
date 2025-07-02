@@ -28,7 +28,7 @@ class Learn:
             r = self.client.get_with_token(
             url=url.make_url(path="/b/wlxt/kc/v_wlkc_xs_xktjb_coassb/queryxnxq")
         )  # example: user profile
-            return r.status_code == 200 and True
+            return r.status_code == 200 and "失效" in r.text
         except Exception:
             return False
 
