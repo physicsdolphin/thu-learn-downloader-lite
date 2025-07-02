@@ -26,6 +26,7 @@ from thu_learn_downloader.download.selector import Selector
 from thu_learn_downloader.login import auto as login
 
 app: Typer = Typer(name="tld")
+cookie_path = Path.home() / ".thu-learn-downloader_cookies.json"
 
 @app.command()
 def main(
@@ -46,21 +47,39 @@ def main(
 
     learn: Learn = Learn(language=language)
 
-    while True:
-        u = username or login.username() or typer.prompt(text="Username")
-        p = password or login.password() or typer.prompt(text="Password", hide_input=True)
+    logged_in = False
 
-        if learn.login_stage1(username=u, password=p):
-            if learn.login_stage2():
-                break
+    if cookie_path.exists():
+        try:
+            learn.client.load_cookies(cookie_path)
+            typer.secho("Loaded existing cookies.", fg=typer.colors.GREEN)
+
+            if learn.is_logged_in():
+                typer.secho("Login via cookies successful.", fg=typer.colors.GREEN)
+                logged_in = True
             else:
-                return
-        else:
-            # On failure, inform the user and loop again
-            typer.secho("The username or password you entered is incorrect. Please try again.", fg=typer.colors.RED)
-            # Clear command-line arguments to ensure user is prompted again
-            username = ""
-            password = ""
+                typer.secho("Session expired. Deleting cookie file.", fg=typer.colors.YELLOW)
+                cookie_path.unlink(missing_ok=True)
+        except Exception as e:
+            typer.secho(f"Failed to load cookies: {e}", fg=typer.colors.RED)
+            cookie_path.unlink(missing_ok=True)
+
+    if not logged_in:
+        while True:
+            u = username or login.username() or typer.prompt(text="Username")
+            p = password or login.password() or typer.prompt(text="Password", hide_input=True)
+
+            if learn.login_stage1(username=u, password=p):
+                if learn.login_stage2():
+                    learn.client.save_cookies(cookie_path)
+                    typer.secho(f"Saved cookies to {cookie_path}", fg=typer.colors.GREEN)
+                    break
+                else:
+                    return
+            else:
+                typer.secho("The username or password you entered is incorrect. Please try again.", fg=typer.colors.RED)
+                username = ""
+                password = ""
 
     if not semesters:
         input_sem = typer.prompt(text="Semester (comma-separated)")

@@ -1,25 +1,36 @@
 import functools
+import re
 import urllib.parse
 from collections.abc import Sequence
+from pathlib import Path
 from urllib.parse import ParseResult
-import re
-import typer
-from collections.abc import Sequence
 
+import typer
 from bs4 import BeautifulSoup, Tag
-from requests import Response
 from gmssl import sm2
+from requests import Response
 
 from thu_learn_downloader.common.typing import cast
 from . import url
 from .client import Client, Language
 from .semester import Semester
 
+cookie_path = Path.home() / ".thu-learn-downloader_cookies.json"
+
 class Learn:
     client: Client
 
     def __init__(self, language: Language = Language.ENGLISH, *args, **kwargs) -> None:
         self.client = Client(language, *args, **kwargs)
+
+    def is_logged_in(self) -> bool:
+        try:
+            r = self.client.get_with_token(
+            url=url.make_url(path="/b/wlxt/kc/v_wlkc_xs_xktjb_coassb/queryxnxq")
+        )  # example: user profile
+            return r.status_code == 200 and True
+        except Exception:
+            return False
 
     def login_stage1(self, username: str, password: str):
         response: Response = self.client.get(url=url.make_url(), verify=False)
@@ -30,7 +41,7 @@ class Learn:
         onclick: str = cast(str, login_button["onclick"])
         login_url: str = cast(str, re.search(r"'(https?://[^']+)'", onclick).group(1))
 
-        soup: BeautifulSoup = BeautifulSoup(
+        BeautifulSoup(
             markup=self.client.get(url=login_url).text, features="html.parser"
         )
 
@@ -56,7 +67,7 @@ class Learn:
         if data.get("result") != "success":
             print("Failed to retrieve authentication methods.")
             print("Response data:", data)
-            return
+            return None
 
         methods = []
         auth_object = data.get("object", {})
@@ -69,7 +80,7 @@ class Learn:
 
         if not methods:
             print("No authentication methods available.")
-            return
+            return None
 
         selected_method = ""
         if len(methods) == 1:
@@ -104,10 +115,9 @@ class Learn:
         if response.json().get("result") != "success":
             print("Failed to send the authentication code.")
             print("Response data:", response.json())
-            return
+            return None
         typer.echo(f"Authentication code sent via {selected_method}. Please check your device.")
 
-        redirect_url = ""
         while True:
             code = typer.prompt("Enter the authentication code")
             response: Response = self.client.post(
@@ -124,7 +134,7 @@ class Learn:
                 typer.secho(response_json.get("msg"), fg=typer.colors.RED)
                 if "失效" in response_json.get("msg"):
                     typer.echo("Code has expired, sending a new code.")
-                    response: Response = self.client.post(
+                    self.client.post(
                         url="https://id.tsinghua.edu.cn/b/doubleAuth/login",
                         data={"action": "SEND_CODE", "type": selected_method}
                     )
@@ -143,10 +153,10 @@ class Learn:
         if ticket is None:
             print("Login probably failed — no ticket received.")
             print("Full query dict:", query)
-            return
+            return None
 
         self.client.get(url=href, verify=False)
-
+        self.client.save_cookies(cookie_path)
         return True
 
     @functools.cached_property
