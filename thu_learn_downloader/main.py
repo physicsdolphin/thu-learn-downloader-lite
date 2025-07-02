@@ -89,7 +89,7 @@ def main(
             for sem in available:
                 if sem.id is not None:  # only print those with valid IDs
                     typer.echo(f"- {sem.id}")
-        input_sem = typer.prompt(text="Semester (comma-separated)")
+        input_sem = typer.prompt(text="Semester (comma-separated), like '2024-2025-1,2024-2025-2' or '2023-2024-3'(input with no quotes)")
         semesters = [s.strip() for s in input_sem.split(",")]
 
     with Downloader(
