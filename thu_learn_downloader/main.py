@@ -82,6 +82,13 @@ def main(
                 password = ""
 
     if not semesters:
+        # Show available semesters to the user
+        available = learn.semesters
+        if available:
+            typer.secho("Available semesters:", fg=typer.colors.CYAN)
+            for sem in available:
+                if sem.id is not None:  # only print those with valid IDs
+                    typer.echo(f"- {sem.id}")
         input_sem = typer.prompt(text="Semester (comma-separated)")
         semesters = [s.strip() for s in input_sem.split(",")]
 

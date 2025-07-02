@@ -21,6 +21,10 @@ class Learn:
     client: Client
 
     def __init__(self, language: Language = Language.ENGLISH, *args, **kwargs) -> None:
+        """
+
+        :rtype: None
+        """
         self.client = Client(language, *args, **kwargs)
 
     def is_logged_in(self) -> bool:
@@ -160,13 +164,6 @@ class Learn:
         return True
 
     @functools.cached_property
-    # def semesters(self) -> Sequence[Semester]:
-    #     return [
-    #         Semester(client=self.client, id=result)
-    #         for result in self.client.get_with_token(
-    #             url=url.make_url(path="/b/wlxt/kc/v_wlkc_xs_xktjb_coassb/queryxnxq")
-    #         ).json()
-    #     ]
     def semesters(self) -> Sequence[Semester]:
         response = self.client.get_with_token(
             url=url.make_url(path="/b/wlxt/kc/v_wlkc_xs_xktjb_coassb/queryxnxq")
