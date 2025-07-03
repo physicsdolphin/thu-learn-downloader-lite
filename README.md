@@ -63,7 +63,7 @@ $ tld [OPTIONS]
 
 - download released binary
 
-For Linux users, refer to [this guide](README_linux.md)
+For Linux/Mac users, refer to [this guide](README_linux.md)
 
 ## test run
 
