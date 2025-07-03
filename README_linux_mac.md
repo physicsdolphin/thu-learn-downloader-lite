@@ -1,6 +1,6 @@
-# Linux Running Guide
+# Linux/Mac Running Guide
 
-This guide will help you set up and run the project step by step on a Linux environment.
+This guide will help you set up and run the project step by step on a Linux/Mac environment.
 
 # 1. Create a Virtual Environment
 
