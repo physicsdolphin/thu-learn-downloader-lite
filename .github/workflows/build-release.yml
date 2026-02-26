@@ -39,7 +39,7 @@ jobs:
             --runtime-hook .\thu_learn_downloader\hook.py
 
       - name: Upload built executable as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: thu_learn_downloader_exe
           path: dist/*.exe
@@ -50,7 +50,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: thu_learn_downloader_exe
 
