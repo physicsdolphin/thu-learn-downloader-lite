@@ -5,7 +5,7 @@ charset-normalizer==3.4.2 ; python_version >= "3.10" and python_version < "4.0"
 click==8.2.1 ; python_version >= "3.10" and python_version < "4.0"
 colorama==0.4.6 ; python_version >= "3.10" and python_version < "4.0" and platform_system == "Windows"
 idna==3.10 ; python_version >= "3.10" and python_version < "4.0"
-markdown-it-py==3.0.0 ; python_version >= "3.10" and python_version < "4.0"
+markdown-it-py==4.2.0 ; python_version >= "3.10" and python_version < "4.0"
 mdurl==0.1.2 ; python_version >= "3.10" and python_version < "4.0"
 pydantic-core
 pygments==2.19.2 ; python_version >= "3.10" and python_version < "4.0"
